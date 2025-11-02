@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Conteudo;
 use Illuminate\Http\Request;
+use App\Http\Requests\ConteudoRequest;
+use App\Services\AI\AIOrchestratorService;
+use App\Models\ConteudoLog; // Importar para auditoria
 use Illuminate\Http\Response;
-use Illuminate\Validation\ValidationException;
 
 class ConteudoController extends Controller
 {
@@ -27,6 +29,12 @@ class ConteudoController extends Controller
             $query->where('papel', $request->input('papel'));
         }
 
+        // Aplica o filtro 'ticker'        
+        if ($request->filled('ticker')) {
+            $query->where('ticker', $request->input('ticker'));
+        }
+
+
         $perPage = $request->input('per_page', 10);
 
         $conteudos = $query->paginate($perPage);
@@ -35,23 +43,39 @@ class ConteudoController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * create: Cria o conteúdo com status = escrito, chamando a orquestração da IA.
+     * POST /conteudos
+     * * @param  \App\Http\Requests\ConteudoRequest  $request
+     * @param  \App\Services\AI\AIOrchestratorService $orchestratorService
+     * @return \Illuminate\Http\JsonResponse
      */
-    public function store(Request $request)
-{
-    $validatedData = $request->validate([
-        'papel' => 'required|string|max:255',
-        'conteudo' => 'required|string',
-    ]);
+    public function store(ConteudoRequest $request, AIOrchestratorService $orchestratorService)
+    {
+        $validatedData = $request->validated();
+        $ticker = $validatedData['ticker'];
 
-   
-    $conteudo = Conteudo::create($validatedData); 
+        try {
+            // 1. CHAMA O ORQUESTRADOR: Recebe o texto gerado pelos 3 agentes
+            $generatedContent = $orchestratorService->generateContentForTicker($ticker);
 
-    return response()->json($conteudo, 201);
-}
+            // 2. Cria o registro no DB (status 'escrito' é default no Model)
+            $conteudo = Conteudo::create([
+                'papel' => $validatedData['papel'],
+                'conteudo' => $generatedContent,
+                'status' => Conteudo::STATUS_ESCRITO,
+                'ticker' => $ticker, // Salva o ticker
+            ]);
+            // Retorna Json com o texto gerado e status inicial "Escrito"
+            return response()->json($conteudo, 201); // Resposta 201 Created
+
+        } catch (\Exception $e) {
+            // Em caso de falha de API ou Orquestrador
+            return response()->json([
+                'message' => 'Falha na orquestração da IA ou na API externa.',
+                'error_detail' => $e->getMessage()
+            ], 500); // Resposta 500 Internal Server Error
+        }
+    }
 
     /**
      * Display the specified resource.
@@ -75,10 +99,15 @@ class ConteudoController extends Controller
      */
     public function aprovar(Conteudo $conteudo)
     {
-        if ($conteudo->aprovar()) {
-            return response()->json($conteudo, 200);
-        } 
-        return response()->json(['message' => 'Conteúdo não pode ser aprovado. Status atual: ' . $conteudo->status], 400);
+        // Lógica de auditoria será tratada pelo Model::aprovar() com origem 'Humano'
+        if ($conteudo->aprovar(ConteudoLog::ORIGEM_HUMANO)) {
+            return response()->json($conteudo, 200); // Resposta 200 OK
+        }
+
+        // Se o método aprovar() falhar (status != escrito)
+        return response()->json([
+            'message' => 'Conteúdo não pode ser aprovado. Status atual: ' . $conteudo->status
+        ], 400); // Resposta 400 Bad Request
     }
 
     /**
@@ -97,7 +126,8 @@ class ConteudoController extends Controller
         $motivo = $request->input('motivo');
 
         // Tenta reprovar o conteúdo com o motivo fornecido
-        if ($conteudo->reprovar($motivo)) {
+         // Lógica de auditoria será tratada pelo Model::reprovar() com origem 'Humano'
+        if ($conteudo->reprovar($motivo, ConteudoLog::ORIGEM_HUMANO)) {
             return response()->json($conteudo, 200);
         } 
         // Se não for possível reprovar, retorna um erro

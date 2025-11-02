@@ -25,7 +25,20 @@ class ConteudoRequest extends FormRequest
     {
         return [
            'papel' => ['required', 'string', 'max:255'],
-           'conteudo' => ['required', 'string'], // 'string' é o tipo correto para texto no Laravel
+           'conteudo' => ['required', 'string', 'max:10'], // 'string' é o tipo correto para texto no Laravel/
         ];
+    }
+
+    /**
+     * Prepara os dados para validação (opcional).
+     */
+    protected function prepareForValidation(): void
+    {
+        // Normaliza o ticker para maiúsculas antes de validar
+        if ($this->has('ticker')) {
+            $this->merge([
+                'ticker' => strtoupper($this->input('ticker')),
+            ]);
+        }
     }
 }
