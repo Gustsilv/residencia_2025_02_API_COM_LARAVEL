@@ -14,8 +14,13 @@ class Conteudo extends Model
     const STATUS_APROVADO = 'aprovado';
     const STATUS_REPROVADO = 'reprovado';
 
+    // Constantes para rastreamento de logs (Auditoria)
+    const ORIGEM_IA      = 'IA';
+    const ORIGEM_HUMANO  = 'Humano';
+
     protected $fillable = [
         'papel',
+        'ticker',
         'conteudo',
         'status',
         'motivo_reprovacao',
@@ -24,6 +29,7 @@ class Conteudo extends Model
     /**
      * Cria um novo registro de log para este Conteúdo.
      * @param string $acao
+     * @param string $origem Origem da ação (IA ou Humano).
      * @param string|null $detalhes
      */
     public function registrarLog(string $acao, ?string $detalhes = null): void
@@ -36,6 +42,7 @@ class Conteudo extends Model
         \App\Models\ConteudoLog::create([
             'conteudo_id' => $this->id,
             'acao' => $acao,
+            'origem' => $origem,
             'detalhes' => $detalhes,
             'user_id' => $userId,
         ]);
@@ -49,8 +56,7 @@ class Conteudo extends Model
         }
 
         // Log antes da alteração
-        $this->registrarLog('aprovado', 'Conteúdo aprovado.'); 
-        
+        $this->registrarLog('aprovado', self::ORIGEM_HUMANO, 'Conteúdo aprovado.');
         $this->status = self::STATUS_APROVADO;
         $this->motivo_reprovacao = null; // Limpa o motivo de reprovação, se houver
         return $this->save();
@@ -69,8 +75,8 @@ class Conteudo extends Model
         }
 
         // Log antes da alteração, incluindo o motivo nos detalhes
-        $this->registrarLog('reprovado', 'Conteúdo reprovado. Motivo: ' . $motivo);
-        
+        $this->registrarLog('reprovado', self::ORIGEM_HUMANO, 'Conteúdo reprovado. Motivo: ' . $motivo);
+
         $this->status = self::STATUS_REPROVADO;
         $this->motivo_reprovacao = $motivo;
         return $this->save();
@@ -87,21 +93,20 @@ class Conteudo extends Model
             }
         });
 
-        // Log de Criação
+        // Log de Criação (Origem IA, pois é disparado pelo ConteudoController@store)
         static::created(function ($conteudo) {
-            $conteudo->registrarLog('criado', 'Conteúdo criado com status: ' . $conteudo->status);
+            $conteudo->registrarLog('criado', self::ORIGEM_IA, 'Conteúdo gerado pela IA.');
         });
         
         // CORREÇÃO AUDITORIA DELEÇÃO: Usar 'deleting' (antes da exclusão do DB) e usar a string 'deletado'
         static::deleting(function ($conteudo) {
-             // Log antes da exclusão do registro no DB
-            $conteudo->registrarLog('deletado', 'Conteúdo deletado.'); // <-- AÇÃO CORRIGIDA PARA DELETADO
+            $conteudo->registrarLog('deletado', self::ORIGEM_HUMANO, 'Conteúdo excluído.'); 
         });
 
         // Regra 4: Editar um conteúdo reprovado volta o status para 'escrito' ao salvar
         static::saving(function ($conteudo) {
             if (
-                $conteudo->isDirty('conteudo') &&
+                $conteudo->isDirty('conteudo') && // Se o corpo do conteúdo foi alterado
                 $conteudo->getOriginal('status') === self::STATUS_REPROVADO
             ) {
                 $conteudo->status = self::STATUS_ESCRITO;
