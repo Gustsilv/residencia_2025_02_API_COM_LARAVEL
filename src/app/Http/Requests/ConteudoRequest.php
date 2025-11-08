@@ -25,7 +25,7 @@ class ConteudoRequest extends FormRequest
     {
         return [
            'papel' => ['required', 'string', 'max:255'],
-           'conteudo' => ['required', 'string', 'max:10'], // 'string' é o tipo correto para texto no Laravel/
+           'ticker' => ['required', 'string', 'max:10'] // 'string' é o tipo correto para texto no Laravel/
         ];
     }
 

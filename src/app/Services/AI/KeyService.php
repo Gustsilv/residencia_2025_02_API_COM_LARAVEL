@@ -18,7 +18,7 @@ class KeyService
     {
         // Constrói um texto informativo baseado nos dados mockados
         $text = "ANÁLISE DE CONTEÚDO (SIMULADA)\n\n";
-        $text .= "O ativo {$financialData['ticker']} está atualmente cotado a R$ {$financialData['price']}, com um volume transacionado de {$financialData['volume']}.\n";
+        $text .= "O ativo {$financialData['ticker']} está atualmente cotado a R$ {$financialData['current_price']}, com um volume transacionado de {$financialData['market_volume']}.\n";
         $text .= "A análise de sentimento (Agente Pedro) indica um humor de mercado '{$sentimentData['sentiment']}' e uma tendência de '{$sentimentData['trend']}'.\n";
         $text .= "Conclusão do Agente Key: A combinação desses fatores sugere que a volatilidade permanecerá alta no curto prazo. Este é um texto mockado de IA.";
         

@@ -35,19 +35,19 @@ class AIOrchestratorService
      * @return string O texto final gerado pelo Agente Key.
      */
     public function generateContentForTicker(string $ticker): string
-    {
-        // 1. Chamar Agente Julia (Coleta de Dados)
-        $financialData = $this->juliaService->getFinancialData($ticker);
-        
-        // 2. Chamar Agente Pedro (Análise de Sentimento)
-        $sentimentData = $this->pedroService->analyzeMarketSentiment($ticker);
-        
-        // 3. Chamar Agente Key (Geração do Texto Final)
-        $finalContent = $this->keyService->generateFinalText(
+        {
+            // 1. Chamar Agente Julia (Coleta de Dados)
+            $financialData = $this->juliaService->collectFinancialData($ticker);
+
+            // 2. Chamar Agente Pedro (Análise de Sentimento)
+            $sentimentData = $this->pedroService->analyzeMarketSentiment($ticker);
+
+            // 3. Chamar Agente Key (Geração do Texto Final)
+            $finalContent = $this->keyService->generateFinalText(
             $financialData,
             $sentimentData
-        );
+            );
 
-        return $finalContent;
-    }
+            return $finalContent;
+        }
 }

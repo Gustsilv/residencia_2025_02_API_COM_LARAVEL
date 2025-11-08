@@ -2,7 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Noticias_DestaquesController;
-
+use App\Http\Controllers\ConteudoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -14,6 +14,11 @@ use App\Http\Controllers\Noticias_DestaquesController;
 | contains the "web" middleware group. Now create something great!
 |
 */
+Route::get('/conteudos/revisao', [ConteudoController::class, 'revisao']);
+
+Route::post('/conteudos/{conteudo}/aprovar', [ConteudoController::class, 'aprovar']);
+Route::post('/conteudos/{conteudo}/reprovar', [ConteudoController::class, 'reprovar']);
+
 
 Route::get('/', function () {
     return view('welcome');

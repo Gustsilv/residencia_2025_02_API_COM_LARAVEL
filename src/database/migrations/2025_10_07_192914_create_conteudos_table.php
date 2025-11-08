@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateConteudosTable extends Migration
+return new class extends Migration
 {
     /**
      * Run the migrations.
@@ -16,14 +16,16 @@ class CreateConteudosTable extends Migration
         Schema::create('conteudos', function (Blueprint $table) {
             $table->id();
 
-            // Campos da tabela
-            $table->string('papel');
-            $table->string('conteudo');
-            $table->string('status')->default('escrito');
+            // Campos de Conteúdo e Rastreamento
+            $table->string('papel'); // Ex: Analista Financeiro
+            $table->string('ticker'); // Ativo analisado, Ex: 'PETR4'
+            $table->text('conteudo'); // Conteúdo longo (artigo) da IA
+
+            // Campos de Fluxo de Trabalho (Workflow)
+            $table->string('status')->default('escrito'); // escrito, aprovado, reprovado
             $table->string('motivo_reprovacao')->nullable();
-            
-            // Criado e atualizado em:
-            $table->timestamps();
+
+            $table->timestamps(); // created_at, updated_at
         });
     }
 
@@ -36,4 +38,4 @@ class CreateConteudosTable extends Migration
     {
         Schema::dropIfExists('conteudos');
     }
-}
+};

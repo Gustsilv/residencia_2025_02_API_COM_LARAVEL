@@ -90,49 +90,68 @@ class ConteudoController extends Controller
         return response()->json($conteudo, 200);
     }
 
-
-    /**
-     * Aprova o conteúdo especificado.
-     * POST /conteudos/{id}/aprovar
-     * @param  \App\Models\Conteudo  $conteudo
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function aprovar(Conteudo $conteudo)
+    public function pendentes()
     {
-        // Lógica de auditoria será tratada pelo Model::aprovar() com origem 'Humano'
-        if ($conteudo->aprovar(ConteudoLog::ORIGEM_HUMANO)) {
-            return response()->json($conteudo, 200); // Resposta 200 OK
-        }
+        $pendentes = Conteudo::where('status', 'escrito')->get();
 
-        // Se o método aprovar() falhar (status != escrito)
-        return response()->json([
-            'message' => 'Conteúdo não pode ser aprovado. Status atual: ' . $conteudo->status
-        ], 400); // Resposta 400 Bad Request
+        return response()->json($pendentes);
+    }
+
+    public function revisao()
+    {
+        // pega só os pendentes de revisão
+        $conteudos = Conteudo::where('status', 'escrito')->get();
+
+        return view('conteudos.revisao', compact('conteudos'));
     }
 
     /**
-     * Reprova o conteúdo especificado com um motivo.
+     * Aprova o conteúdo especificado, marcando a origem como 'Humana'.
+     * POST /conteudos/{id}/aprovar
+     *
+     * @param \App\Models\Conteudo $conteudo O modelo do Conteúdo a ser aprovado.
+     * @return \Illuminate\Http\RedirectResponse Redireciona para a página de revisão em caso de sucesso ou retorna com erro.
+     */
+    public function aprovar(Conteudo $conteudo)
+    {
+        if ($conteudo->aprovar(Conteudo::ORIGEM_HUMANO)) {
+
+            session()->flash('sucesso', "Conteúdo ID {$conteudo->id} aprovado com sucesso.");
+
+            return redirect('/conteudos/revisao');
+        }
+
+        return back()->with('erro', 'Conteúdo não pode ser aprovado. Status atual: ' . $conteudo->status);
+    }
+   
+
+
+    /**
+     * Reprova o conteúdo especificado com um motivo fornecido na requisição.
      * POST /conteudos/{id}/reprovar
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Conteudo  $conteudo
-     * @return \Illuminate\Http\JsonResponse
+     *
+     * @param \Illuminate\Http\Request $request A requisição HTTP contendo o campo 'motivo'.
+     * @param \App\Models\Conteudo $conteudo O modelo do Conteúdo a ser reprovado.
+     * @return \Illuminate\Http\RedirectResponse Redireciona para a página de revisão em caso de sucesso ou retorna com erro.
      */
     public function reprovar(Request $request, Conteudo $conteudo)
-    { 
+    {
         $request->validate([
             'motivo' => 'required|string|min:10',
         ]);
 
         $motivo = $request->input('motivo');
 
-        // Tenta reprovar o conteúdo com o motivo fornecido
-         // Lógica de auditoria será tratada pelo Model::reprovar() com origem 'Humano'
-        if ($conteudo->reprovar($motivo, ConteudoLog::ORIGEM_HUMANO)) {
-            return response()->json($conteudo, 200);
-        } 
-        // Se não for possível reprovar, retorna um erro
-        return response()->json(['message' => 'Conteúdo não pode ser reprovado. Status atual: ' . $conteudo->status], 400);
+        if ($conteudo->reprovar($motivo, Conteudo::ORIGEM_HUMANO)) {
+
+            session()->flash('sucesso', "Conteúdo ID {$conteudo->id} reprovado com sucesso.");
+            return redirect('/conteudos/revisao');
+        }
+
+        return back()->with('erro', 'Conteúdo não pode ser reprovado. Status atual: ' . $conteudo->status);
     }
+
+
 
     /**
      * Remove the specified resource from storage.

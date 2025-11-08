@@ -32,13 +32,10 @@ class Conteudo extends Model
      * @param string $origem Origem da ação (IA ou Humano).
      * @param string|null $detalhes
      */
-    public function registrarLog(string $acao, ?string $detalhes = null): void
+    public function registrarLog(string $acao, string $origem, ?string $detalhes = null): void
     {
-        // Obtém o ID do usuário logado (se houver, senão é null)
         $userId = auth()->check() ? auth()->id() : null; 
 
-        // Cria o log de ação
-        // Nota: Assumindo que ConteudoLog está importado ou acessível.
         \App\Models\ConteudoLog::create([
             'conteudo_id' => $this->id,
             'acao' => $acao,
